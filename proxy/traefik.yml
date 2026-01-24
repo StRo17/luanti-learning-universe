@@ -1,0 +1,28 @@
+global:
+  checkNewVersion: true
+  sendAnonymousUsage: false
+
+api:
+  dashboard: true
+  insecure: true # Nur für Localhost Entwicklung auf true! In Prod auf false + Auth middleware.
+
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false # Sicherheit: Nur explizit markierte Container werden geroutet
+
+entryPoints:
+  web:
+    address: ":80"
+    # HTTP zu HTTPS Redirect (für Prod später aktivieren)
+    # http:
+    #   redirections:
+    #     entryPoint:
+    #       to: websecure
+    #       scheme: https
+
+  websecure:
+    address: ":443"
+
+  luanti:
+    address: ":30000/udp" # UDP für Minetest/Luanti

@@ -1,0 +1,111 @@
+name: luanti-learning-universe
+
+services:
+  # ----------------------------------------------------------------
+  # REVERSE PROXY (Traefik)
+  # ----------------------------------------------------------------
+  traefik:
+    image: traefik:v3.0
+    container_name: llu_proxy
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+      - "${LUANTI_PORT}:${LUANTI_PORT}/udp"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./proxy/traefik.yml:/etc/traefik/traefik.yml:ro
+    networks:
+      - llu-network
+
+  # ----------------------------------------------------------------
+  # DATABASE (PostgreSQL)
+  # ----------------------------------------------------------------
+  database:
+    image: postgis/postgis:15-3.3
+    container_name: llu_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - ./database/postgres-data:/var/lib/postgresql/data
+    networks:
+      - llu-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ----------------------------------------------------------------
+  # CACHE (Redis) - RENAMED & HEALTHCHECK ADDED
+  # ----------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: llu_redis
+    restart: unless-stopped
+    networks:
+      - llu-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ----------------------------------------------------------------
+  # BACKEND (Directus Headless CMS)
+  # ----------------------------------------------------------------
+  directus:
+    image: directus/directus:11
+    container_name: llu_backend
+    restart: unless-stopped
+    ports:
+      - "8055:8055"
+    environment:
+      PUBLIC_URL: ${PUBLIC_URL}
+      KEY: ${KEY}
+      SECRET: ${SECRET}
+      
+      DB_CLIENT: 'pg'
+      DB_HOST: 'database'
+      DB_PORT: '5432'
+      DB_DATABASE: ${POSTGRES_DB}
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      
+      # Caching Explicit Setup
+      CACHE_ENABLED: 'true'
+      CACHE_STORE: 'redis'
+      CACHE_REDIS: 'redis://redis:6379' # Zeigt auf Service 'redis'
+      
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      
+      STORAGE_LOCATIONS: "local"
+      STORAGE_LOCAL_ROOT: "/directus/uploads"
+      EXTENSIONS_AUTO_RELOAD: 'true'
+      
+    volumes:
+      - ./backend/uploads:/directus/uploads
+      - ./backend/extensions:/directus/extensions
+      - ./backend/schema:/directus/schema
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy # Wartet jetzt auf Redis Ping!
+    networks:
+      - llu-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.directus.rule=Host(`api.localhost`)"
+      - "traefik.http.services.directus.loadbalancer.server.port=8055"
+
+networks:
+  llu-network:
+    driver: bridge

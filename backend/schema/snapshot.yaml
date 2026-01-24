@@ -1,0 +1,19 @@
+version: 1
+directus: 11.14.1
+vendor: postgres
+collections: []
+fields: []
+systemFields:
+  - collection: directus_activity
+    field: timestamp
+    schema:
+      is_indexed: true
+  - collection: directus_revisions
+    field: activity
+    schema:
+      is_indexed: true
+  - collection: directus_revisions
+    field: parent
+    schema:
+      is_indexed: true
+relations: []

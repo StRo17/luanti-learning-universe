@@ -33,7 +33,8 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
-      - ./database/postgres-data:/var/lib/postgresql/data
+      # PROF-WEG: Datenbank muss schnell sein (Named Volume), nicht im Git
+      - postgres_data:/var/lib/postgresql/data
     networks:
       - llu-network
     healthcheck:
@@ -43,7 +44,7 @@ services:
       retries: 5
 
   # ----------------------------------------------------------------
-  # CACHE (Redis) - RENAMED & HEALTHCHECK ADDED
+  # CACHE (Redis)
   # ----------------------------------------------------------------
   redis:
     image: redis:7-alpine
@@ -71,6 +72,7 @@ services:
       KEY: ${KEY}
       SECRET: ${SECRET}
       
+      # Datenbank Connection
       DB_CLIENT: 'pg'
       DB_HOST: 'database'
       DB_PORT: '5432'
@@ -78,27 +80,41 @@ services:
       DB_USER: ${POSTGRES_USER}
       DB_PASSWORD: ${POSTGRES_PASSWORD}
       
-      # Caching Explicit Setup
+      # --- REDIS HARD FIX (WICHTIG!) ---
+      REDIS: 'redis://redis:6379'
       CACHE_ENABLED: 'true'
       CACHE_STORE: 'redis'
-      CACHE_REDIS: 'redis://redis:6379' # Zeigt auf Service 'redis'
+      CACHE_REDIS: 'redis://redis:6379'
+      MESSENGER_STORE: 'redis'
+      MESSENGER_REDIS: 'redis://redis:6379'
       
+      # Admin
       ADMIN_EMAIL: ${ADMIN_EMAIL}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
       
+      # Files
       STORAGE_LOCATIONS: "local"
       STORAGE_LOCAL_ROOT: "/directus/uploads"
+      
+      # Development Settings
+      # Wir wollen, dass Directus Änderungen an Extensions sofort erkennt
       EXTENSIONS_AUTO_RELOAD: 'true'
+      TELEMETRY: 'false'
+      UPDATE_CHECK: 'false'
       
     volumes:
+      # PROFI-WEG:
+      # 1. Uploads: User-Daten -> Lokal im Ordner, aber via .gitignore ignoriert
       - ./backend/uploads:/directus/uploads
+      # 2. Extensions: Code -> Bind Mount, damit wir entwickeln und committen können
       - ./backend/extensions:/directus/extensions
+      # 3. Schema: Config -> Bind Mount, damit der Snapshot im Repo landet
       - ./backend/schema:/directus/schema
     depends_on:
       database:
         condition: service_healthy
       redis:
-        condition: service_healthy # Wartet jetzt auf Redis Ping!
+        condition: service_healthy
     networks:
       - llu-network
     labels:
@@ -109,3 +125,7 @@ services:
 networks:
   llu-network:
     driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local

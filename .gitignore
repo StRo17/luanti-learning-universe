@@ -1,0 +1,39 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Testing
+coverage
+
+# Next.js
+.next/
+out/
+build/
+
+# Directus & Backend
+backend/uploads/*
+!backend/uploads/.gitkeep
+backend/database/
+*.sqlite
+
+# Database Data (Docker Volumes handled locally, but just in case mapped locally)
+database/postgres-data/
+luanti/worlds/*
+!luanti/worlds/.gitkeep
+
+# Environment Variables (CRITICAL)
+.env
+.env.production
+.env.local
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.override.yml
+
+# IDE
+.vscode/
+.idea/

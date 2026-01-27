@@ -1,28 +1,102 @@
+# ==================================================================
+# Traefik v3 Configuration - Luanti Learning Universe
+# ==================================================================
+
 global:
   checkNewVersion: true
   sendAnonymousUsage: false
 
+# ------------------------------------------------------------------
+# API & Dashboard
+# ------------------------------------------------------------------
 api:
   dashboard: true
-  insecure: true # Nur für Localhost Entwicklung auf true! In Prod auf false + Auth middleware.
+  # WICHTIG: In Production auf false setzen und über Middleware absichern!
+  insecure: true  # Nur für Dev! Prod: false + BasicAuth Middleware
 
-providers:
-  docker:
-    endpoint: "unix:///var/run/docker.sock"
-    exposedByDefault: false # Sicherheit: Nur explizit markierte Container werden geroutet
-
+# ------------------------------------------------------------------
+# EntryPoints (Ports)
+# ------------------------------------------------------------------
 entryPoints:
+  # HTTP (Port 80)
   web:
     address: ":80"
-    # HTTP zu HTTPS Redirect (für Prod später aktivieren)
+    # Für Production: HTTP → HTTPS Redirect aktivieren
     # http:
     #   redirections:
     #     entryPoint:
     #       to: websecure
     #       scheme: https
+    #       permanent: true
 
+  # HTTPS (Port 443)
   websecure:
     address: ":443"
+    # Für Production: TLS aktivieren
+    # http:
+    #   tls:
+    #     certResolver: letsencrypt
+    #     domains:
+    #       - main: example.com
+    #         sans:
+    #           - "*.example.com"
 
-  luanti:
-    address: ":30000/udp" # UDP für Minetest/Luanti
+# WICHTIG: Luanti nutzt UDP, das wird NICHT durch Traefik geroutet!
+# UDP-Traffic läuft direkt über Docker Port Mapping (siehe docker-compose.yml)
+# Der Luanti Port (30000/udp) ist DIREKT am Container exponiert.
+
+# ------------------------------------------------------------------
+# Providers
+# ------------------------------------------------------------------
+providers:
+  # Docker Provider
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false  # Sicherheit: Nur explizit markierte Container
+    network: luanti-learning-universe_llu-network
+    watch: true
+
+  # File Provider (für statische Konfiguration)
+  file:
+    directory: /etc/traefik
+    watch: true
+
+# ------------------------------------------------------------------
+# Certificate Resolvers (Let's Encrypt für Production)
+# ------------------------------------------------------------------
+# certificatesResolvers:
+#   letsencrypt:
+#     acme:
+#       email: admin@example.com
+#       storage: /acme.json
+#       # Staging während Testing nutzen, dann auf Production umstellen
+#       # caServer: https://acme-staging-v02.api.letsencrypt.org/directory
+#       httpChallenge:
+#         entryPoint: web
+
+# ------------------------------------------------------------------
+# Logging
+# ------------------------------------------------------------------
+log:
+  level: INFO  # Production: WARN oder ERROR
+  format: common  # Optionen: common, json
+  filePath: /var/log/traefik/traefik.log
+
+accessLog:
+  filePath: /var/log/traefik/access.log
+  format: common
+  bufferingSize: 100
+
+# ------------------------------------------------------------------
+# Metrics (Optional - für Monitoring)
+# ------------------------------------------------------------------
+# metrics:
+#   prometheus:
+#     addEntryPointsLabels: true
+#     addRoutersLabels: true
+#     addServicesLabels: true
+#     entryPoint: metrics
+#
+# entryPoints:
+#   metrics:
+#     address: ":8082"

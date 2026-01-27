@@ -13,35 +13,46 @@ services:
     ports:
       - "80:80"
       - "443:443"
-      - "8080:8080"
-      - "${LUANTI_PORT}:${LUANTI_PORT}/udp"
+      - "8080:8080"  # Dashboard (nur für Dev, in Prod entfernen!)
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./proxy/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./proxy/acme.json:/acme.json  # SSL Zertifikate (chmod 600!)
     networks:
       - llu-network
+    environment:
+      - TZ=Europe/Berlin
 
   # ----------------------------------------------------------------
-  # DATABASE (PostgreSQL)
+  # DATABASE (PostgreSQL with PostGIS)
   # ----------------------------------------------------------------
   database:
     image: postgis/postgis:15-3.3
     container_name: llu_db
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
+      PGDATA: /var/lib/postgresql/data/pgdata
+      TZ: Europe/Berlin
     volumes:
-      # PROF-WEG: Datenbank muss schnell sein (Named Volume), nicht im Git
       - postgres_data:/var/lib/postgresql/data
     networks:
       - llu-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 5s
+      interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   # ----------------------------------------------------------------
   # CACHE (Redis)
@@ -50,13 +61,26 @@ services:
     image: redis:7-alpine
     container_name: llu_redis
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
     networks:
       - llu-network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
+      interval: 10s
       timeout: 3s
       retries: 5
+      start_period: 10s
+    environment:
+      - TZ=Europe/Berlin
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   # ----------------------------------------------------------------
   # BACKEND (Directus Headless CMS)
@@ -65,51 +89,93 @@ services:
     image: directus/directus:11
     container_name: llu_backend
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     ports:
-      - "8055:8055"
+      - "127.0.0.1:8055:8055"  # Nur localhost-Zugriff, Rest über Traefik
+    # WICHTIG: Custom Entrypoint für Schema-Import beim Start
+    entrypoint: ["/directus/bootstrap.sh"]
     environment:
+      # URLs
       PUBLIC_URL: ${PUBLIC_URL}
+      
+      # Security
       KEY: ${KEY}
       SECRET: ${SECRET}
+      ACCESS_TOKEN_TTL: "15m"
+      REFRESH_TOKEN_TTL: "7d"
+      REFRESH_TOKEN_COOKIE_SECURE: "true"
+      REFRESH_TOKEN_COOKIE_SAME_SITE: "lax"
       
-      # Datenbank Connection
-      DB_CLIENT: 'pg'
-      DB_HOST: 'database'
-      DB_PORT: '5432'
+      # Database
+      DB_CLIENT: "pg"
+      DB_HOST: "database"
+      DB_PORT: "5432"
       DB_DATABASE: ${POSTGRES_DB}
       DB_USER: ${POSTGRES_USER}
       DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_SSL: "false"  # In Prod mit internem Netzwerk ok, extern SSL nutzen
       
-      # --- REDIS HARD FIX (WICHTIG!) ---
-      REDIS: 'redis://redis:6379'
-      CACHE_ENABLED: 'true'
-      CACHE_STORE: 'redis'
-      CACHE_REDIS: 'redis://redis:6379'
-      MESSENGER_STORE: 'redis'
-      MESSENGER_REDIS: 'redis://redis:6379'
+      # Redis Cache & Messaging
+      REDIS: "redis://redis:6379"
+      CACHE_ENABLED: "true"
+      CACHE_STORE: "redis"
+      CACHE_REDIS: "redis://redis:6379"
+      CACHE_TTL: "30m"
+      MESSENGER_STORE: "redis"
+      MESSENGER_REDIS: "redis://redis:6379"
+      SYNCHRONIZATION_STORE: "redis"
+      SYNCHRONIZATION_REDIS: "redis://redis:6379"
       
-      # Admin
+      # Admin Account
       ADMIN_EMAIL: ${ADMIN_EMAIL}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
       
-      # Files
+      # File Storage
       STORAGE_LOCATIONS: "local"
       STORAGE_LOCAL_ROOT: "/directus/uploads"
+      FILE_METADATA_ALLOW_LIST: "title,description,tags"
       
-      # Development Settings
-      # Wir wollen, dass Directus Änderungen an Extensions sofort erkennt
-      EXTENSIONS_AUTO_RELOAD: 'true'
-      TELEMETRY: 'false'
-      UPDATE_CHECK: 'false'
+      # Rate Limiting (Production Security)
+      RATE_LIMITER_ENABLED: "true"
+      RATE_LIMITER_STORE: "redis"
+      RATE_LIMITER_REDIS: "redis://redis:6379"
+      RATE_LIMITER_POINTS: "50"
+      RATE_LIMITER_DURATION: "1"
+      
+      # CORS (Anpassen für Production!)
+      CORS_ENABLED: "true"
+      CORS_ORIGIN: "true"  # In Prod auf spezifische Domains setzen!
+      
+      # Extensions & Development
+      EXTENSIONS_AUTO_RELOAD: "true"
+      EXTENSIONS_CACHE_TTL: "30s"
+      
+      # System
+      TELEMETRY: "false"
+      UPDATE_CHECK: "false"
+      LOG_LEVEL: "info"  # Prod: "warn" oder "error"
+      LOG_STYLE: "pretty"
+      TZ: "Europe/Berlin"
+      
+      # Email (für Production konfigurieren!)
+      # EMAIL_FROM: "noreply@example.com"
+      # EMAIL_TRANSPORT: "smtp"
+      # EMAIL_SMTP_HOST: "smtp.example.com"
+      # EMAIL_SMTP_PORT: "587"
+      # EMAIL_SMTP_USER: "user"
+      # EMAIL_SMTP_PASSWORD: "password"
       
     volumes:
-      # PROFI-WEG:
-      # 1. Uploads: User-Daten -> Lokal im Ordner, aber via .gitignore ignoriert
+      # Bootstrap Script für Schema-Import
+      - ./backend/bootstrap.sh:/directus/bootstrap.sh:ro
+      # Uploads: Persistent, aber nicht im Git
       - ./backend/uploads:/directus/uploads
-      # 2. Extensions: Code -> Bind Mount, damit wir entwickeln und committen können
+      # Extensions: Versionskontrolliert
       - ./backend/extensions:/directus/extensions
-      # 3. Schema: Config -> Bind Mount, damit der Snapshot im Repo landet
-      - ./backend/schema:/directus/schema
+      # Database Snapshots: Versionskontrolliert & AUTO-IMPORT
+      - ./backend/schema:/directus/snapshots:ro
+      
     depends_on:
       database:
         condition: service_healthy
@@ -119,13 +185,87 @@ services:
       - llu-network
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.directus.rule=Host(`api.localhost`)"
+      - "traefik.http.routers.directus.rule=Host(`api.${DOMAIN_NAME}`)"
+      - "traefik.http.routers.directus.entrypoints=web"
       - "traefik.http.services.directus.loadbalancer.server.port=8055"
+      # Für HTTPS (in Prod aktivieren):
+      # - "traefik.http.routers.directus.entrypoints=websecure"
+      # - "traefik.http.routers.directus.tls=true"
+      # - "traefik.http.routers.directus.tls.certresolver=letsencrypt"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  # ----------------------------------------------------------------
+  # GAME SERVER (Luanti)
+  # ----------------------------------------------------------------
+  luanti:
+    image: ghcr.io/luanti-org/luanti:latest
+    container_name: llu_game_server
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "${LUANTI_PORT}:${LUANTI_PORT}/udp"
+    environment:
+      - CLI_ARGS=
+      - TZ=Europe/Berlin
+    volumes:
+      # Config (read-only)
+      - ./luanti/minetest.conf:/etc/minetest/minetest.conf:ro
+      
+      # Data Directory - WRITABLE Volume
+      - luanti_data:/var/lib/minetest/.minetest
+      
+      # Mods & Games (Development: bind mounts)
+      - ./luanti/mods:/var/lib/minetest/.minetest/mods
+      - ./luanti/games:/var/lib/minetest/.minetest/games
+      
+    networks:
+      - llu-network
+    depends_on:
+      directus:
+        condition: service_started
+    command: 
+      - /usr/local/bin/luanti
+      - --config
+      - /etc/minetest/minetest.conf
+      - --gameid
+      - minetest
+      - --worldname
+      - world
+      - --logfile
+      - ""
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+    healthcheck:
+      test: ["CMD-SHELL", "netstat -lun | grep ${LUANTI_PORT} || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
 networks:
   llu-network:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
 
 volumes:
+  # Database: Performance-kritisch, named volume
   postgres_data:
+    driver: local
+  
+  # Redis: Persistence für Cache/Queue
+  redis_data:
+    driver: local
+  
+  # Luanti: Komplettes Data Directory inkl. Worlds
+  luanti_data:
     driver: local

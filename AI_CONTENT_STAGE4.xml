@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ProjectDocumentation xmlns="http://luanti-learning-universe/docs" version="1.0" lastUpdated="2026-01-27">
+
+    <!-- ================================================================================== -->
+    <!-- PROJEKT ÜBERSICHT -->
+    <!-- ================================================================================== -->
+    <Overview>
+        <Title>LUANTI LEARNING UNIVERSE (LLU)</Title>
+        <Vision>
+            Ein skalierbares, containerisiertes Learning Management System (LMS), das eine immersive 
+            3D-Lernwelt (Luanti/Minetest) mit einem modernen Headless CMS (Directus) verbindet. 
+            Ziel ist ein Open-Source Ökosystem für gamifiziertes Lernen.
+        </Vision>
+        <ArchitectureType>Microservices</ArchitectureType>
+        <Orchestration>Docker Compose (V2)</Orchestration>
+    </Overview>
+
+    <!-- ================================================================================== -->
+    <!-- STATUS QUO (PHASE 1 & 2 COMPLETED) -->
+    <!-- ================================================================================== -->
+    <CurrentStatus phase="MVP Infrastructure" completion="30%">
+        <Milestones>
+            <Milestone status="completed">Professionelle Verzeichnisstruktur & Git-Init</Milestone>
+            <Milestone status="completed">Docker Container Orchestrierung (DB, Cache, Backend, Proxy, Game)</Milestone>
+            <Milestone status="completed">Datenbank-Schema V1 (Quests, Steps, Progress) implementiert</Milestone>
+            <Milestone status="completed">Luanti Server Containerisierung & Mod-Entwicklung (HTTP-Interface)</Milestone>
+            <Milestone status="completed">Next.js 15 Frontend Setup mit Directus SDK Integration</Milestone>
+            <Milestone status="completed">End-to-End Datenfluss: Backend -> API -> Frontend</Milestone>
+        </Milestones>
+        <Health>
+            <Service name="Directus" status="Healthy" note="Schema Auto-Import via bootstrap.sh aktiv"/>
+            <Service name="Luanti" status="Healthy" note="Kann Backend pingen (HTTP Mod)"/>
+            <Service name="PostgreSQL" status="Healthy" note="Named Volume Persistence"/>
+            <Service name="Frontend" status="Running" note="Read-Only Zugriff auf Quests"/>
+        </Health>
+    </CurrentStatus>
+
+    <!-- ================================================================================== -->
+    <!-- TECHNISCHE SPEZIFIKATIONEN -->
+    <!-- ================================================================================== -->
+    <TechStack>
+        <Frontend>
+            <Framework>Next.js 15 (App Router)</Framework>
+            <Language>TypeScript</Language>
+            <Styling>Tailwind CSS</Styling>
+            <SDK>@directus/sdk</SDK>
+        </Frontend>
+        <Backend>
+            <CMS>Directus 11 (Headless)</CMS>
+            <Database>PostgreSQL 15 + PostGIS</Database>
+            <Cache>Redis 7 (Alpine)</Cache>
+            <SchemaManagement>Snapshot-basiert (YAML)</SchemaManagement>
+        </Backend>
+        <GameServer>
+            <Engine>Luanti (ehem. Minetest) - Image: ghcr.io/luanti-org/luanti:latest</Engine>
+            <Modding>Lua (Server-Side)</Modding>
+            <Communication>HTTP-Requests an Directus API</Communication>
+        </GameServer>
+        <Infrastructure>
+            <Proxy>Traefik v3</Proxy>
+            <Environment>Docker Compose</Environment>
+        </Infrastructure>
+    </TechStack>
+
+    <!-- ================================================================================== -->
+    <!-- NETZWERK & SCHNITTSTELLEN -->
+    <!-- ================================================================================== -->
+    <Connectivity>
+        <Network name="llu-network">Bridge Network (172.28.0.0/16)</Network>
+        <Ports context="Development (Localhost)">
+            <Port service="Frontend" external="3000" internal="3000">Web UI</Port>
+            <Port service="Directus" external="127.0.0.1:8055" internal="8055">API / Admin Panel (IPv4 Bind)</Port>
+            <Port service="Traefik" external="80/443" internal="80/443">Reverse Proxy Entrypoints</Port>
+            <Port service="Luanti" external="30000" internal="30000" protocol="UDP">Game Server Traffic</Port>
+        </Ports>
+        <API>
+            <Endpoint type="REST" url="http://127.0.0.1:8055">Frontend Communication</Endpoint>
+            <Endpoint type="HTTP-Internal" url="http://directus:8055">Docker Internal (Luanti -> Directus)</Endpoint>
+        </API>
+    </Connectivity>
+
+    <!-- ================================================================================== -->
+    <!-- ENTWICKLUNGS-WORKFLOW -->
+    <!-- ================================================================================== -->
+    <DevelopmentEnvironment>
+        <OS>Windows 11 + WSL2 (Ubuntu)</OS>
+        <IDE>VS Code (Remote - WSL)</IDE>
+        <ContainerRuntime>Docker Desktop (WSL Integration)</ContainerRuntime>
+        <VersionControl>
+            <System>Git</System>
+            <Repository>github.com/StRo17/luanti-learning-universe</Repository>
+            <BranchingModel>Git Flow (develop -> main)</BranchingModel>
+            <PushStrategy>Direkter Push auf 'develop' (aktuell), PRs für 'main'</PushStrategy>
+        </VersionControl>
+    </DevelopmentEnvironment>
+
+    <!-- ================================================================================== -->
+    <!-- DEPLOYMENT STRATEGIE (PRODUCTION) -->
+    <!-- ================================================================================== -->
+    <Deployment>
+        <TargetSystem>
+            <Provider>Hetzner Cloud</Provider>
+            <ServerType>CX43 (vCPU Intel/AMD, 16GB RAM)</ServerType>
+            <OS>Ubuntu 24.04 LTS (Docker-CE)</OS>
+        </TargetSystem>
+        
+        <RolloutProcedure>
+            <Step order="1">Repository klonen (Branch: main)</Step>
+            <Step order="2">.env Datei aus .env.example erstellen (Secrets generieren)</Step>
+            <Step order="3">Ausführung: ./setup.sh prod</Step>
+            <Step order="4">Automatischer Schema-Import via bootstrap.sh</Step>
+        </RolloutProcedure>
+
+        <ServerConfigurationRequirements>
+            <Security>
+                <EnvVars>KEY/SECRET müssen kryptografisch sicher sein (min 32 Zeichen)</EnvVars>
+                <Passwords>DB & Admin Passwörter ändern!</Passwords>
+                <Firewall>UFW konfigurieren (Allow: 22, 80, 443, 30000/UDP)</Firewall>
+            </Security>
+            <SSL>
+                <Provider>Let's Encrypt (via Traefik)</Provider>
+                <Config>In traefik.yml 'certificatesResolvers' aktivieren</Config>
+            </SSL>
+            <Data>
+                <Persistence>Named Volumes garantieren Datenerhalt bei Updates</Persistence>
+                <Backup>Backup-Strategie für /var/lib/docker/volumes/ notwendig</Backup>
+            </Data>
+        </ServerConfigurationRequirements>
+    </Deployment>
+
+    <!-- ================================================================================== -->
+    <!-- NÄCHSTE SCHRITTE (ROADMAP) -->
+    <!-- ================================================================================== -->
+    <NextSteps>
+        <Phase4>
+            <Feature>Authentication Flow (NextAuth / Directus Auth)</Feature>
+            <Feature>Token Validierung (Luanti -> Frontend)</Feature>
+            <Feature>XP & Progress System visualisieren</Feature>
+        </Phase4>
+        <MissingFeatures>
+            <Item>Interaktive Quest-Logik in Lua</Item>
+            <Item>User-Dashboard im Frontend</Item>
+            <Item>Automatisierte Backups</Item>
+        </MissingFeatures>
+    </NextSteps>
+
+</ProjectDocumentation>

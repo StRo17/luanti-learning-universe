@@ -1,4 +1,5 @@
-import { createDirectus, rest, staticToken } from '@directus/sdk';
+import { createDirectus, rest, authentication, staticToken } from '@directus/sdk';
+import { cookies } from 'next/headers'; // Wichtig für Auth
 import { 
   Quest, 
   QuestStep, 
@@ -6,34 +7,54 @@ import {
   UserProgress, 
   School, 
   LuantiWorld 
-} from '@/types/schema'; // Stelle sicher, dass UserProgress in schema.d.ts exportiert ist!
+} from '@/types/schema';
 
-// 1. Mapping: Deine Types auf die Directus Collection Namen
-// Directus nutzt snake_case (quests), deine Types sind PascalCase (Quest)
-interface Schema {
+// Schema Definition
+export interface Schema {
   quests: Quest[];
   quest_steps: QuestStep[];
-  directus_users: User[]; // System-Collection
+  directus_users: User[];
   user_progress: UserProgress[];
   schools: School[];
   luanti_worlds: LuantiWorld[];
 }
 
-// 2. Globaler Client-Singleton (für Server Components)
-// Wir nutzen caching: 'no-store' per Default für Echtzeit-Daten, 
-// oder Next.js natives Caching in den fetch requests.
+// URL Definition
+const directusUrl = process.env.DIRECTUS_URL || process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8055';
 
-const directusUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8055';
-
+// 1. Globaler Public Client (Singleton)
 export const directus = createDirectus<Schema>(directusUrl)
   .with(rest({
-    onRequest: (options) => ({ ...options, cache: 'no-store' }), // Deaktiviert Cache für Dev
+    onRequest: (options) => ({ ...options, cache: 'no-store' }),
   }));
 
 /**
- * Helper für Bilder-URLs
+ * 2. Helper für Bilder-URLs
  */
 export function getAssetUrl(id: string) {
   if (!id) return '';
   return `${directusUrl}/assets/${id}`;
+}
+
+/**
+ * 3. Authentifizierter Client (Server Components)
+ * Diese Funktion fehlte dir vorhin!
+ */
+export async function getAuthClient() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get('directus_token')?.value;
+
+  const client = createDirectus<Schema>(directusUrl)
+    .with(rest({
+      onRequest: (options) => ({
+        ...options,
+        headers: {
+          ...options.headers,
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        cache: 'no-store', 
+      }),
+    }));
+
+  return client;
 }

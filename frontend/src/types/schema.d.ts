@@ -90,3 +90,13 @@ export interface QuestStep {
   content_data: Record<string, any>; // JSON config for the step
   completion_token_secret?: string; // Internal verification secret
 }
+
+export interface UserProgress {
+  id: UUID;
+  user_id: User | UUID;
+  quest_step_id: QuestStep | UUID;
+  status: 'started' | 'completed' | 'failed';
+  token_fragment?: string;
+  date_created?: ISODateString;
+  date_updated?: ISODateString;
+}

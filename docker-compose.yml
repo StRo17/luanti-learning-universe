@@ -173,8 +173,8 @@ services:
       - ./backend/uploads:/directus/uploads
       # Extensions: Versionskontrolliert
       - ./backend/extensions:/directus/extensions
-      # Database Snapshots: Versionskontrolliert & AUTO-IMPORT
-      - ./backend/schema:/directus/snapshots:ro
+      # Database Snapshots: Versionskontrolliert & AUTO-IMPORT -> für Rollout muss hier - ./backend/schema:/directus/snapshots:ro
+      - ./backend/schema:/directus/snapshots
       
     depends_on:
       database:

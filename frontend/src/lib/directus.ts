@@ -1,12 +1,13 @@
-import { createDirectus, rest, authentication, staticToken } from '@directus/sdk';
-import { cookies } from 'next/headers'; // Wichtig für Auth
+import { createDirectus, rest, authentication } from '@directus/sdk';
+import { cookies } from 'next/headers';
 import { 
   Quest, 
   QuestStep, 
   User, 
   UserProgress, 
   School, 
-  LuantiWorld 
+  LuantiWorld,
+  ClaimableToken // Importiert
 } from '@/types/schema';
 
 // Schema Definition
@@ -17,12 +18,13 @@ export interface Schema {
   user_progress: UserProgress[];
   schools: School[];
   luanti_worlds: LuantiWorld[];
+  claimable_tokens: ClaimableToken[]; // Registriert
 }
 
 // URL Definition
 const directusUrl = process.env.DIRECTUS_URL || process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8055';
 
-// 1. Globaler Public Client (Singleton)
+// 1. Globaler Public Client
 export const directus = createDirectus<Schema>(directusUrl)
   .with(rest({
     onRequest: (options) => ({ ...options, cache: 'no-store' }),
@@ -37,8 +39,7 @@ export function getAssetUrl(id: string) {
 }
 
 /**
- * 3. Authentifizierter Client (Server Components)
- * Diese Funktion fehlte dir vorhin!
+ * 3. Authentifizierter Client (Server Components & Actions)
  */
 export async function getAuthClient() {
   const cookieStore = await cookies();

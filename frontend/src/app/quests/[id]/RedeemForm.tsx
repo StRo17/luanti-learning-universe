@@ -1,14 +1,14 @@
 'use client';
 
 import { useActionState } from 'react';
-import { redeemTokenAction } from '../../actions';
+import { redeemTokenAction } from '../../actions'; // Geht 2 Ordner hoch zu actions.ts
 
 export default function RedeemForm({ questId }: { questId: string }) {
   const [state, formAction, isPending] = useActionState(redeemTokenAction, null);
 
   return (
-    <div className="bg-gradient-to-r from-blue-900/20 to-purple-900/20 p-8 rounded-2xl border border-blue-500/30 mt-12">
-      <h3 className="text-2xl font-bold mb-4 flex items-center gap-2">
+    <div className="bg-slate-900/80 p-8 rounded-2xl border border-blue-500/30 mt-12 shadow-xl">
+      <h3 className="text-2xl font-bold mb-4 flex items-center gap-2 text-white">
         🏆 Quest Abschließen
       </h3>
       <p className="text-slate-400 mb-6">
@@ -35,12 +35,12 @@ export default function RedeemForm({ questId }: { questId: string }) {
 
       {/* FEEDBACK MESSAGES */}
       {state?.error && (
-        <div className="mt-4 p-3 bg-red-900/50 border border-red-500 text-red-200 rounded text-center">
+        <div className="mt-4 p-4 bg-red-900/50 border border-red-500/50 text-red-200 rounded-lg text-center font-bold">
           ❌ {state.error}
         </div>
       )}
       {state?.success && (
-        <div className="mt-4 p-3 bg-green-900/50 border border-green-500 text-green-200 rounded text-center">
+        <div className="mt-4 p-4 bg-green-900/50 border border-green-500/50 text-green-200 rounded-lg text-center font-bold">
           {state.success}
         </div>
       )}

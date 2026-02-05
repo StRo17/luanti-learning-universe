@@ -1,16 +1,22 @@
-import { createDirectus, rest, authentication } from '@directus/sdk';
-import { cookies } from 'next/headers';
-import { 
+import { createDirectus, rest, staticToken } from '@directus/sdk';
+import type { 
   Quest, 
   QuestStep, 
   User, 
   UserProgress, 
   School, 
   LuantiWorld,
-  ClaimableToken // Importiert
+  ClaimableToken 
 } from '@/types/schema';
 
-// Schema Definition
+// --- SMART URL LOGIK ---
+const isServer = typeof window === 'undefined';
+// Server nutzt internes Docker-Netz (directus:8055), Browser nutzt localhost:8055
+const directusUrl = isServer 
+  ? (process.env.DIRECTUS_URL_INTERNAL || 'http://directus:8055')
+  : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8055');
+
+// Schema Definition (beibehalten)
 export interface Schema {
   quests: Quest[];
   quest_steps: QuestStep[];
@@ -18,11 +24,8 @@ export interface Schema {
   user_progress: UserProgress[];
   schools: School[];
   luanti_worlds: LuantiWorld[];
-  claimable_tokens: ClaimableToken[]; // Registriert
+  claimable_tokens: ClaimableToken[];
 }
-
-// URL Definition
-const directusUrl = process.env.DIRECTUS_URL || process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8055';
 
 // 1. Globaler Public Client
 export const directus = createDirectus<Schema>(directusUrl)
@@ -35,26 +38,26 @@ export const directus = createDirectus<Schema>(directusUrl)
  */
 export function getAssetUrl(id: string) {
   if (!id) return '';
-  return `${directusUrl}/assets/${id}`;
+  // Assets werden IMMER über die Public URL geladen (vom Browser des Schülers)
+  const publicUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8055';
+  return `${publicUrl}/assets/${id}`;
 }
 
 /**
  * 3. Authentifizierter Client (Server Components & Actions)
  */
-export async function getAuthClient() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get('directus_token')?.value;
+export async function getAuthClient(token?: string) {
+  if (!token) {
+    throw new Error('Nicht authentifiziert');
+  }
 
   const client = createDirectus<Schema>(directusUrl)
+    .with(staticToken(token))
     .with(rest({
       onRequest: (options) => ({
         ...options,
-        headers: {
-          ...options.headers,
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        cache: 'no-store', 
-      }),
+        cache: 'no-store',
+      })
     }));
 
   return client;

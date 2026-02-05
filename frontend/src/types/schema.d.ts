@@ -1,113 +1,87 @@
-/**
- * LUANTI LEARNING UNIVERSE - CORE DATA MODEL
- * Status: Phase 4 (Full Stack)
- */
-
 export type UUID = string;
-export type ISODateString = string;
-
-// ENUMS
-export enum UserRole {
-  GLOBAL_ADMIN = 'global_admin',
-  SCHOOL_ADMIN = 'school_admin',
-  TEACHER = 'teacher',
-  STUDENT = 'student',
-  PARENT = 'parent',
-  SERVICE_ACCOUNT = 'service_account',
-}
-
-export enum SubscriptionTier {
-  FREE = 'free',
-  SCHOOL = 'school',
-  ENTERPRISE = 'enterprise',
-}
-
-export enum QuestSubject {
-  MATH = 'math',
-  SCIENCE = 'science',
-  CODING = 'coding',
-  LANGUAGE = 'language',
-  ART = 'art',
-}
-
-export enum StepType {
-  EXTERNAL = 'external_learning',
-  CODING = 'coding',
-  INGAME = 'ingame_task',
-  QUIZ = 'quiz',
-}
-
-// CORE ENTITIES
-
-export interface School {
-  id: UUID;
-  name: string;
-  slug: string;
-  subscription_tier: SubscriptionTier;
-  date_created: ISODateString;
-}
-
-export interface LuantiWorld {
-  id: UUID;
-  school_id: School | UUID;
-  name: string;
-  world_port: number;
-  container_id?: string;
-  is_active: boolean;
-}
 
 export interface User {
   id: UUID;
-  status: 'active' | 'invited' | 'archived';
-  role: UserRole;
-  school_id?: School | UUID;
-  username: string;
-  luanti_player_name?: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  role: string;
+  school_id?: UUID;
+  xp: number;
   xp_total: number;
-  coins_balance: number;
-  first_name?: string;
-  email?: string;
+  coins_balance: number;  // Hinzugefügt
+  level: number;
 }
 
 export interface Quest {
   id: UUID;
-  status: 'published' | 'draft' | 'archived';
   title: string;
   description: string;
-  subject: QuestSubject;
-  difficulty: number;
-  min_level_required: number;
-  // NEU: Diese Felder fehlten und verursachten Fehler #1
-  date_created?: ISODateString;
-  date_updated?: ISODateString;
+  content?: string;
+  image?: string;
+  xp_reward: number;
+  required_level: number;
+  status: 'draft' | 'published';
 }
 
 export interface QuestStep {
   id: UUID;
-  quest_id: Quest | UUID;
-  sort_order: number;
+  quest_id: UUID;
   title: string;
-  // FIX: Umbenannt von 'type' zu 'step_type', da Directus snake_case nutzt (Fehler #2,3,4)
-  step_type: StepType; 
-  content_data: Record<string, any>;
-  completion_token_secret?: string;
+  description: string;
+  content?: string;
+  order: number;
+  xp_reward: number;
+  external_id?: string;
+  provider_id?: UUID;
 }
 
 export interface UserProgress {
   id: UUID;
-  user_id: User | UUID;
-  quest_step_id?: QuestStep | UUID;
-  status: 'started' | 'completed' | 'failed';
+  user_id: UUID;
+  quest_step_id: UUID;
+  status: 'completed' | 'failed';
+  date_created: string;
   token_fragment?: string;
-  date_created?: ISODateString;
-  date_updated?: ISODateString;
 }
 
-// NEU: Token System
+export interface School {
+  id: UUID;
+  name: string;
+  luanti_world_id?: UUID;
+}
+
+export interface LuantiWorld {
+  id: UUID;
+  name: string;
+  server_address: string;
+  server_port: number;
+}
+
 export interface ClaimableToken {
   id: UUID;
   token: string;
-  quest_id: Quest | UUID;
-  is_claimed: boolean;
-  claimed_by?: User | UUID;
+  user_id?: UUID;
+  claimed: boolean;
+  date_claimed?: string;
+  token_fragment?: string;
+}
+
+export interface ExternalProvider {
+  id: UUID;
+  name: string;
+  api_key: string;
+  webhook_secret: string;
+  base_url: string;
+  status: 'active' | 'inactive';
+}
+
+export interface ExternalProgress {
+  id: UUID;
+  user_id: UUID;
+  provider_id: UUID;
+  external_user_id: string;
+  external_level_id: string;
+  status: 'completed' | 'failed';
+  date_completed: string;
 }

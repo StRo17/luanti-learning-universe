@@ -1,0 +1,19 @@
+{
+  "name": "luanti-lms-xp-hook",
+  "version": "1.0.0",
+  "type": "module",
+  "directus:extension": {
+    "type": "hook",
+    "path": "dist/index.js",
+    "source": "src/index.ts",
+    "host": "^11.0.0"
+  },
+  "scripts": {
+    "build": "directus-extension build",
+    "dev": "directus-extension build -w"
+  },
+  "devDependencies": {
+    "@directus/extensions-sdk": "11.0.3",
+    "typescript": "^5.0.0"
+  }
+}

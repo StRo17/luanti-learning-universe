@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { getAuthClient } from "@/lib/directus";
 import { readMe } from "@directus/sdk";
 import { redirect } from "next/navigation";

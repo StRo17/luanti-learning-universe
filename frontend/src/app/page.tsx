@@ -2,6 +2,7 @@ import { directus } from "@/lib/directus";
 import { readItems } from "@directus/sdk";
 import Link from "next/link"; // <--- WICHTIG: Neuer Import
 
+export const dynamic = 'force-dynamic';
 export default async function HomePage() {
   // 1. Daten holen (Server-Side Fetching)
   const quests = await directus.request(
@@ -38,7 +39,7 @@ export default async function HomePage() {
                   {Array.isArray(quest.subject) ? quest.subject[0] : quest.subject}
                 </span>
                 <span className="text-slate-500 text-sm">
-                  Lvl {quest.difficulty}
+                  Lvl {String(quest.difficulty)}
                 </span>
               </div>
               

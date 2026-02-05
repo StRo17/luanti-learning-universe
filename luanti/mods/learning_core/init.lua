@@ -13,11 +13,19 @@ if not http_api then
     error(msg)
 end
 
--- 2. KONFIGURATION
--- Backend URL
-local backend_url = "http://directus:8055" 
--- API Key für den 'Luanti Bot' Service Account
-local auth_token = "Y92TO9PQOB_LsN33VfoJ71fgFnRholLh" 
+-- 2. KONFIGURATION (aus minetest.conf geladen)
+-- Backend URL (Default: Docker-interne Adresse)
+local backend_url = minetest.settings:get("llu_backend_url") or "http://directus:8055"
+
+-- API Key für den 'Luanti Bot' Service Account (MUSS in minetest.conf gesetzt werden!)
+local auth_token = minetest.settings:get("llu_api_token")
+
+-- Security Check: Token muss konfiguriert sein
+if not auth_token or auth_token == "" then
+    local msg = "[" .. mod_name .. "] CRITICAL: llu_api_token not set in minetest.conf! Set 'llu_api_token = <your_token>'"
+    minetest.log("error", msg)
+    error(msg)
+end
 
 -- 3. HELPER: CODE GENERATOR
 -- Erzeugt Codes wie "K9X2" (ohne verwirrende Zeichen wie I/1/0/O)

@@ -2,7 +2,7 @@ import { directus } from "@/lib/directus";
 import { readItem, readItems } from "@directus/sdk";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import RedeemForm from "./RedeemForm"; // Import der neuen Component
+import RedeemForm from "./RedeemForm"; // HIER binden wir die Datei von eben ein
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -15,21 +15,22 @@ export default async function QuestDetailPage({ params }: PageProps) {
     // 1. Quest Daten laden
     const quest = await directus.request(
       readItem('quests', id, {
-        fields: ['*'], // Einfacher Fix: Alles laden
+        fields: ['*'], 
       })
-    );
+    ) as any; // <--- HIER 'as any' hinzufügen
 
     // 2. Schritte laden
     const steps = await directus.request(
       readItems('quest_steps', {
         filter: { quest_id: { _eq: id } },
-        sort: ['sort_order', 'sort'] as any,
+        sort: ['id'] as any,
       })
-    );
+    ) as any[]; // <--- HIER 'as any[]' hinzufügen
 
     return (
       <main className="min-h-screen bg-slate-950 text-white p-6 md:p-12">
         <div className="max-w-3xl mx-auto">
+          {/* Zurück Button */}
           <Link 
             href="/" 
             className="text-slate-400 hover:text-white mb-8 inline-flex items-center gap-2 transition-colors"
@@ -37,6 +38,7 @@ export default async function QuestDetailPage({ params }: PageProps) {
             ← Zurück zur Übersicht
           </Link>
 
+          {/* Header */}
           <header className="mb-10 border-b border-slate-800 pb-10">
             <div className="flex gap-3 mb-4">
               <span className="bg-purple-900/50 text-purple-300 px-3 py-1 rounded-full text-sm font-mono">
@@ -46,16 +48,15 @@ export default async function QuestDetailPage({ params }: PageProps) {
                 Level {quest.difficulty}
               </span>
             </div>
-            
             <h1 className="text-4xl md:text-5xl font-bold mb-6 text-white">
               {quest.title}
             </h1>
-            
             <div className="prose prose-invert prose-lg max-w-none text-slate-300">
               {quest.description}
             </div>
           </header>
 
+          {/* Steps */}
           <section className="mb-12">
             <h2 className="text-2xl font-bold mb-6">Aufgaben</h2>
             <div className="space-y-4">
@@ -68,7 +69,6 @@ export default async function QuestDetailPage({ params }: PageProps) {
                     <h3 className="text-xl font-semibold mb-2">{step.title}</h3>
                     <div className="text-slate-400 text-sm">
                       Typ: <span className="uppercase text-xs tracking-wider bg-slate-800 px-2 py-0.5 rounded">
-                        {/* Hier war der Fehler: step.step_type statt step.type */}
                         {Array.isArray(step.step_type) ? step.step_type[0] : step.step_type}
                       </span>
                     </div>
@@ -79,7 +79,7 @@ export default async function QuestDetailPage({ params }: PageProps) {
             </div>
           </section>
 
-          {/* Client Component einbinden */}
+          {/* DAS FORMULAR (Hier ist es!) */}
           <RedeemForm questId={id} />
 
         </div>
@@ -87,6 +87,7 @@ export default async function QuestDetailPage({ params }: PageProps) {
     );
 
   } catch (error) {
+    console.error(error); // Wichtig für Debugging im Terminal
     notFound();
   }
 }

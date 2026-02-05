@@ -82,6 +82,27 @@ services:
         max-size: "10m"
         max-file: "3"
 
+# ----------------------------------------------------------------
+  # FRONTEND (Next.js)
+  # ----------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: llu_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8055 # oder via Traefik https://api.deine-domain.de
+      - DIRECTUS_URL_INTERNAL=http://directus:8055  # Interne URL für Server-seitige API-Calls (z.B. getServerSideProps)
+      - DIRECTUS_ADMIN_TOKEN=${DIRECTUS_ADMIN_TOKEN}  # Für Server-seitige XP-Updates
+    networks:
+      - llu-network
+    depends_on:
+      directus:
+        condition: service_started
+
   # ----------------------------------------------------------------
   # BACKEND (Directus Headless CMS)
   # ----------------------------------------------------------------
@@ -145,7 +166,7 @@ services:
       
       # CORS (Anpassen für Production!)
       CORS_ENABLED: "true"
-      CORS_ORIGIN: "true"  # In Prod auf spezifische Domains setzen!
+      CORS_ORIGIN: "http://localhost:3000"  # Frontend URL - für Prod anpassen!
       
       # Extensions & Development
       EXTENSIONS_AUTO_RELOAD: "true"

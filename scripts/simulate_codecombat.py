@@ -12,7 +12,7 @@ load_dotenv('.env.test')
 # WEBHOOK_URL = os.getenv('CODECOMBAT_WEBHOOK_URL', 'http://localhost:8055/luanti-external-webhook/webhook/CODECOMBAT')
 # WEBHOOK_SECRET = os.getenv('CODECOMBAT_WEBHOOK_SECRET', 'test-secret')
 PROVIDER_ID = "2c0c153e-02d3-47fd-9925-426819c1cd6f"
-WEBHOOK_URL = f'http://localhost:8055/directus-extension-luanti-external-webhook/{PROVIDER_ID}'
+WEBHOOK_URL = 'http://localhost:8055/luanti-external-webhook/2c0c153e-02d3-47fd-9925-426819c1cd6f'
 WEBHOOK_SECRET = "test-secret"
 
 def simulate_level_complete(user_id: str, level_id: str):

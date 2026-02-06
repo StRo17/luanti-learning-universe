@@ -9,9 +9,13 @@ export default async function DashboardPage() {
   const client = await getAuthClient();
 
   try {
-    // Versuche, User-Daten zu laden
-    // query: { fields: ['*'] } lädt alles, inklusive avatar, xp etc.
+    // Lade Benutzerdaten mit allen Feldern
     const user = await client.request(readMe({ fields: ['*'] }));
+    
+    // Fallback für nicht initialisierte Benutzerobjekte
+    if (!user) {
+      throw new Error('Benutzerdaten nicht verfügbar');
+    }
 
     return (
       <main className="min-h-screen bg-slate-950 text-white p-6 md:p-12">
@@ -39,13 +43,13 @@ export default async function DashboardPage() {
             {/* Stats Card 2 */}
             <div className="bg-slate-900 p-6 rounded-xl border border-slate-800">
               <div className="text-slate-400 text-sm mb-1 uppercase tracking-wider">XP Total</div>
-              <div className="text-4xl font-bold text-purple-400">{user.xp_total || 0}</div>
+              <div className="text-4xl font-bold text-purple-400">{user?.xp_total ?? 0}</div>
             </div>
 
             {/* Stats Card 3 */}
             <div className="bg-slate-900 p-6 rounded-xl border border-slate-800">
               <div className="text-slate-400 text-sm mb-1 uppercase tracking-wider">Coins</div>
-              <div className="text-4xl font-bold text-yellow-400">{user.coins_balance || 0}</div>
+              <div className="text-4xl font-bold text-yellow-400">{user?.coins_balance ?? 0}</div>
             </div>
           </div>
 
@@ -62,7 +66,19 @@ export default async function DashboardPage() {
       </main>
     );
   } catch (error) {
-    // Wenn Token ungültig oder abgelaufen -> Redirect zum Login
-    redirect('/login');
+    console.error('Dashboard Fehler:', error);
+    
+    // Bei Authentifizierungsfehlern zum Login umleiten
+    if (error instanceof Error && error.message.includes('Nicht authentifiziert')) {
+      redirect('/login');
+    }
+    
+    // Bei anderen Fehlern Fehlerseite anzeigen
+    return (
+      <div className="min-h-screen bg-slate-950 text-white p-12 text-center">
+        <h2 className="text-2xl font-bold mb-4">⚠️ Systemfehler</h2>
+        <p>Dashboard konnte nicht geladen werden. Bitte versuche es später erneut.</p>
+      </div>
+    );
   }
 }

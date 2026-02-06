@@ -1,27 +1,19 @@
 {
-  "name": "directus-extension-luanti-external-webhook",
+  "name": "luanti-external-webhook",
   "version": "1.0.0",
   "type": "module",
   "directus:extension": {
     "type": "endpoint",
     "path": "dist/index.js",
     "source": "src/index.ts",
-    "host": "^10.1.1"
+    "host": "^11.0.0"
   },
   "scripts": {
-    "build": "tsc && cp package.json dist/",
-    "dev": "tsc -w",
-    "watch": "tsc -w",
-    "install-extension": "npm run build && cd dist && npm link && cd ../../../directus/extensions && npm link directus-extension-luanti-external-webhook"
+    "build": "directus-extension build",
+    "dev": "directus-extension build -w"
   },
   "devDependencies": {
-    "@directus/extensions-sdk": "10.1.1",
-    "@types/express": "^4.17.17",
-    "@types/node": "^18.16.0",
-    "typescript": "^5.0.4",
-    "@types/knex": "^0.16.1"
-  },
-  "dependencies": {
-    "@directus/sdk": "^10.1.1"
+    "@directus/extensions-sdk": "11.0.3",
+    "typescript": "^5.0.0"
   }
 }

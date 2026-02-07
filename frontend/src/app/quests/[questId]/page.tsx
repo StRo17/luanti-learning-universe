@@ -2,35 +2,36 @@ import { directus } from "@/lib/directus";
 import { readItem, readItems } from "@directus/sdk";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import RedeemForm from "./RedeemForm"; // HIER binden wir die Datei von eben ein
+import RedeemForm from "./RedeemForm"; 
 
 interface PageProps {
-  params: Promise<{ id: string }>;
+  // Geändert von id zu questId
+  params: Promise<{ questId: string }>;
 }
 
 export default async function QuestDetailPage({ params }: PageProps) {
-  const { id } = await params;
+  // Geändert von id zu questId
+  const { questId } = await params;
 
   try {
-    // 1. Quest Daten laden
+    // 1. Quest Daten laden mit questId
     const quest = await directus.request(
-      readItem('quests', id, {
+      readItem('quests', questId, {
         fields: ['*'], 
       })
-    ) as any; // <--- HIER 'as any' hinzufügen
+    ) as any;
 
-    // 2. Schritte laden
+    // 2. Schritte laden mit questId
     const steps = await directus.request(
       readItems('quest_steps', {
-        filter: { quest_id: { _eq: id } },
+        filter: { quest_id: { _eq: questId } },
         sort: ['id'] as any,
       })
-    ) as any[]; // <--- HIER 'as any[]' hinzufügen
+    ) as any[];
 
     return (
       <main className="min-h-screen bg-slate-950 text-white p-6 md:p-12">
         <div className="max-w-3xl mx-auto">
-          {/* Zurück Button */}
           <Link 
             href="/" 
             className="text-slate-400 hover:text-white mb-8 inline-flex items-center gap-2 transition-colors"
@@ -38,7 +39,6 @@ export default async function QuestDetailPage({ params }: PageProps) {
             ← Zurück zur Übersicht
           </Link>
 
-          {/* Header */}
           <header className="mb-10 border-b border-slate-800 pb-10">
             <div className="flex gap-3 mb-4">
               <span className="bg-purple-900/50 text-purple-300 px-3 py-1 rounded-full text-sm font-mono">
@@ -56,7 +56,6 @@ export default async function QuestDetailPage({ params }: PageProps) {
             </div>
           </header>
 
-          {/* Steps */}
           <section className="mb-12">
             <h2 className="text-2xl font-bold mb-6">Aufgaben</h2>
             <div className="space-y-4">
@@ -79,15 +78,15 @@ export default async function QuestDetailPage({ params }: PageProps) {
             </div>
           </section>
 
-          {/* DAS FORMULAR (Hier ist es!) */}
-          <RedeemForm questId={id} />
+          {/* questId übergeben */}
+          <RedeemForm questId={questId} />
 
         </div>
       </main>
     );
 
   } catch (error) {
-    console.error(error); // Wichtig für Debugging im Terminal
+    console.error("Fehler beim Laden der Quest-Details:", error);
     notFound();
   }
 }

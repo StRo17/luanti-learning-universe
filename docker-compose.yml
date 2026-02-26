@@ -94,8 +94,8 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8055 # oder via Traefik https://api.deine-domain.de
-      - DIRECTUS_URL_INTERNAL=http://directus:8055  # Interne URL für Server-seitige API-Calls (z.B. getServerSideProps)
+      - NEXT_PUBLIC_API_URL=http://localhost:8055 # Client-seitige API-Calls
+      - INTERNAL_API_URL=http://directus:8055  # Server-seitige API-Calls (z.B. getServerSideProps)
       - DIRECTUS_ADMIN_TOKEN=${DIRECTUS_ADMIN_TOKEN}  # Für Server-seitige XP-Updates
     networks:
       - llu-network
@@ -125,7 +125,7 @@ services:
       SECRET: ${SECRET}
       ACCESS_TOKEN_TTL: "15m"
       REFRESH_TOKEN_TTL: "7d"
-      REFRESH_TOKEN_COOKIE_SECURE: "true"
+      REFRESH_TOKEN_COOKIE_SECURE: "false"  # In Prod: "true" mit HTTPS
       REFRESH_TOKEN_COOKIE_SAME_SITE: "lax"
       
       # Database
@@ -233,6 +233,7 @@ services:
     environment:
       - CLI_ARGS=
       - TZ=Europe/Berlin
+      - LUANTI_API_URL=http://directus:8055  # Interne URL für API-Calls
     volumes:
       # Config (read-only)
       - ./luanti/minetest.conf:/etc/minetest/minetest.conf:ro
@@ -249,7 +250,7 @@ services:
     depends_on:
       directus:
         condition: service_started
-    command: 
+    command:
       - /usr/local/bin/luanti
       - --config
       - /etc/minetest/minetest.conf

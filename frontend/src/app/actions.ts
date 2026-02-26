@@ -12,11 +12,13 @@ interface DirectusSchema {
   quest_steps: QuestStep[];
 }
 
-// Smart URL Logik (wie in lib/directus.ts)
+// Smart URL Logik für Server/Client-Unterscheidung
 const isServer = typeof window === 'undefined';
-const API_URL = isServer 
-  ? (process.env.DIRECTUS_URL_INTERNAL || 'http://directus:8055')
+const API_URL = isServer
+  ? (process.env.INTERNAL_API_URL || 'http://directus:8055')
   : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8055');
+
+console.log(`[Directus] Connecting to API at: ${API_URL}`);
 
 export type ActionState = {
   error?: string;
@@ -184,7 +186,7 @@ export async function redeemTokenAction(prevState: ActionState, formData: FormDa
 
   } catch (error: any) {
     // Detailliertes Error-Logging
-    console.error('[Token Redeem] Fehler:', {
+    console.error(`[Token Redeem] Fehler bei Anfrage an ${API_URL}:`, {
       status: error.response?.status,
       message: error.message,
       details: error.response?.data

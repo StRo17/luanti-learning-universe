@@ -12,7 +12,7 @@ global:
 api:
   dashboard: true
   # WICHTIG: In Production auf false setzen und über Middleware absichern!
-  insecure: true  # Nur für Dev! Prod: false + BasicAuth Middleware
+  insecure: false  # Dashboard nur über gesicherten Zugriff
 
 # ------------------------------------------------------------------
 # EntryPoints (Ports)
@@ -22,24 +22,24 @@ entryPoints:
   web:
     address: ":80"
     # Für Production: HTTP → HTTPS Redirect aktivieren
-    # http:
-    #   redirections:
-    #     entryPoint:
-    #       to: websecure
-    #       scheme: https
-    #       permanent: true
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+          permanent: true
 
   # HTTPS (Port 443)
   websecure:
     address: ":443"
     # Für Production: TLS aktivieren
-    # http:
-    #   tls:
-    #     certResolver: letsencrypt
-    #     domains:
-    #       - main: example.com
-    #         sans:
-    #           - "*.example.com"
+    http:
+      tls:
+        certResolver: letsencrypt
+        domains:
+          - main: ${DOMAIN_NAME}
+            sans:
+              - "*.${DOMAIN_NAME}"
 
 # WICHTIG: Luanti nutzt UDP, das wird NICHT durch Traefik geroutet!
 # UDP-Traffic läuft direkt über Docker Port Mapping (siehe docker-compose.yml)
@@ -64,15 +64,13 @@ providers:
 # ------------------------------------------------------------------
 # Certificate Resolvers (Let's Encrypt für Production)
 # ------------------------------------------------------------------
-# certificatesResolvers:
-#   letsencrypt:
-#     acme:
-#       email: admin@example.com
-#       storage: /acme.json
-#       # Staging während Testing nutzen, dann auf Production umstellen
-#       # caServer: https://acme-staging-v02.api.letsencrypt.org/directory
-#       httpChallenge:
-#         entryPoint: web
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: ${SSL_EMAIL}
+      storage: /acme.json
+      httpChallenge:
+        entryPoint: web
 
 # ------------------------------------------------------------------
 # Logging

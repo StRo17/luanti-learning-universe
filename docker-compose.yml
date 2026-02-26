@@ -13,7 +13,6 @@ services:
     ports:
       - "80:80"
       - "443:443"
-      - "8080:8080"  # Dashboard (nur für Dev, in Prod entfernen!)
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./proxy/traefik.yml:/etc/traefik/traefik.yml:ro
@@ -210,9 +209,9 @@ services:
       - "traefik.http.routers.directus.entrypoints=web"
       - "traefik.http.services.directus.loadbalancer.server.port=8055"
       # Für HTTPS (in Prod aktivieren):
-      # - "traefik.http.routers.directus.entrypoints=websecure"
-      # - "traefik.http.routers.directus.tls=true"
-      # - "traefik.http.routers.directus.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.directus.entrypoints=websecure"
+      - "traefik.http.routers.directus.tls=true"
+      - "traefik.http.routers.directus.tls.certresolver=letsencrypt"
     logging:
       driver: "json-file"
       options:

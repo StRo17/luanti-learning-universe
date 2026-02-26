@@ -40,7 +40,12 @@ function logHeader(msg: string) {
 
 // Konfiguration
 const DIRECTUS_URL = process.env.DIRECTUS_URL || 'http://localhost:8055';
-const ADMIN_TOKEN = process.env.DIRECTUS_ADMIN_TOKEN || 'admin-token-placeholder';
+const ADMIN_TOKEN = process.env.DIRECTUS_ADMIN_TOKEN;
+
+if (!ADMIN_TOKEN) {
+  console.error('DIRECTUS_ADMIN_TOKEN muss in .env gesetzt sein');
+  process.exit(1);
+}
 
 // Erwartete Struktur
 const EXPECTED_COLLECTIONS = ['schools', 'luanti_worlds'];
